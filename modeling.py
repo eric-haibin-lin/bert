@@ -811,11 +811,15 @@ def transformer_model(input_tensor,
     raise ValueError(
         "The hidden size (%d) is not a multiple of the number of attention "
         "heads (%d)" % (hidden_size, num_attention_heads))
-
+  # hidden = 768
+  # num_attention_heads = 12
+  # attention_head_size = 64
   attention_head_size = int(hidden_size / num_attention_heads)
   input_shape = get_shape_list(input_tensor, expected_rank=3)
+  # batch_size = 32
   batch_size = input_shape[0]
   seq_length = input_shape[1]
+  # input_width = 768
   input_width = input_shape[2]
 
   # The Transformer performs sum residuals on all layers so the input needs
@@ -831,6 +835,7 @@ def transformer_model(input_tensor,
   prev_output = reshape_to_matrix(input_tensor)
 
   all_layer_outputs = []
+  # num_hidden_layers = 12
   for layer_idx in range(num_hidden_layers):
     with tf.variable_scope("layer_%d" % layer_idx):
       layer_input = prev_output
@@ -844,6 +849,7 @@ def transformer_model(input_tensor,
               attention_mask=attention_mask,
               num_attention_heads=num_attention_heads,
               size_per_head=attention_head_size,
+              # attention_probs_dropout_prob = 0.1
               attention_probs_dropout_prob=attention_probs_dropout_prob,
               initializer_range=initializer_range,
               do_return_2d_tensor=True,
@@ -867,6 +873,7 @@ def transformer_model(input_tensor,
               attention_output,
               hidden_size,
               kernel_initializer=create_initializer(initializer_range))
+          # hidden_dropout_prob = 0.1
           attention_output = dropout(attention_output, hidden_dropout_prob)
           attention_output = layer_norm(attention_output + layer_input)
 
@@ -874,7 +881,9 @@ def transformer_model(input_tensor,
       with tf.variable_scope("intermediate"):
         intermediate_output = tf.layers.dense(
             attention_output,
+            # intermediate_size = 3072
             intermediate_size,
+            # intermediate_act_fn = gelu
             activation=intermediate_act_fn,
             kernel_initializer=create_initializer(initializer_range))
 
