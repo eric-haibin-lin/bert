@@ -71,8 +71,10 @@ for source_name in names:
         print('%s: %s'%(target_name, target.shape))
     else:
         print('%s: %s'%(source_name, source.shape))
+converted['decoder.3.weight'] = converted['word_embed.0.weight']
 print("Total number of parameters: ", len(tensors))
-print("Total number of converted parameters: ", len(converted))
+print("Total number of converted parameters: ", len(converted),
+      "(including one duplicate parameter for decoder weight tying)")
 with open(file_name + '.converted', 'wb') as f:
     pickle.dump(converted, f, pickle.HIGHEST_PROTOCOL)
 print("Converted parameters stored at %s"%(file_name+'.converted'))
