@@ -22,6 +22,7 @@ import collections
 import random
 import tensorflow as tf
 import tokenization
+import time
 
 flags = tf.flags
 
@@ -43,6 +44,8 @@ flags.DEFINE_bool(
     "models and False for cased models.")
 
 flags.DEFINE_integer("max_seq_length", 128, "Maximum sequence length.")
+flags.DEFINE_integer("num_parts", 1, "Number of parts.")
+flags.DEFINE_integer("part_idx", 0, "Part index.")
 
 flags.DEFINE_integer("max_predictions_per_seq", 20,
                      "Maximum number of masked LM predictions per sequence.")
@@ -416,11 +419,26 @@ def main(_):
   for input_pattern in FLAGS.input_file.split(","):
     input_files.extend(tf.gfile.Glob(input_pattern))
 
-  tf.logging.info("*** Reading from input files ***")
+  input_files = sorted(input_files)
+  num_files = len(input_files)
+  num_files_per_part = (num_files + FLAGS.num_parts - 1) // FLAGS.num_parts
+  part_start = num_files_per_part * FLAGS.part_idx
+  part_end = num_files_per_part * (FLAGS.part_idx + 1)
+  if part_end > num_files:
+      part_end = num_files
+  random.seed(FLAGS.random_seed)
+  rng = random.Random(FLAGS.random_seed)
+  random.shuffle(input_files)
+  input_files = input_files[part_start:part_end]
+
+  tf.logging.info("*** Reading from %d input files ***"%len(input_files))
+  count = 0
   for input_file in input_files:
     tf.logging.info("  %s", input_file)
+    count += 1
+    if count >= 5:
+      break
 
-  rng = random.Random(FLAGS.random_seed)
   instances = create_training_instances(
       input_files, tokenizer, FLAGS.max_seq_length, FLAGS.dupe_factor,
       FLAGS.short_seq_prob, FLAGS.masked_lm_prob, FLAGS.max_predictions_per_seq,
@@ -439,4 +457,7 @@ if __name__ == "__main__":
   flags.mark_flag_as_required("input_file")
   flags.mark_flag_as_required("output_file")
   flags.mark_flag_as_required("vocab_file")
+  tic = time.time()
   tf.app.run()
+  toc = time.time()
+  tf.logging.info("Process time=%s"%(toc-tic))
